@@ -1,13 +1,35 @@
 <?php
 
-//shows how the user.json file was created
+/* 
+ * Yoslogin - Copyright 2013 Yosko (www.yosko.net)
+ * 
+ * This file is part of Yoslogin.
+ * 
+ * Yoslogin is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * Yoslogin is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Yoslogin.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ */
 
-require_once('PasswordHash.php');
-$hasher = new PasswordHash(8, FALSE);
+/**
+ * Shows how the user.json file was created
+ */
+
+//no need for YosLogin here, juste YosLoginTools
+require_once('yoslogintools.class.php');
 
 $response = array();
-$response[] = array("login" => "yosko","password" => $hasher->HashPassword("yosko"));
-$response[] = array("login" => "idleman","password" => $hasher->HashPassword("idleman"));
+$response[] = array("login" => "yosko","password" => YosLoginTools::hashPassword("yosko"));
+$response[] = array("login" => "idleman","password" => YosLoginTools::hashPassword("idleman"));
 
 $fp = fopen('user.json', 'w');
 fwrite($fp, json_encode($response));
