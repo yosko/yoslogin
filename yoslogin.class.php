@@ -201,12 +201,13 @@ abstract class YosLogin {
         $user = $this->getUser($login);
         
         //check user/password
-        $user['isLoggedIn'] = false;
         if(empty($user)) {
             $user = array();
             $user['error']['unknownLogin'] = true;
+            $user['isLoggedIn'] = false;
         } elseif(!YosLoginTools::checkPassword($password, $user['password'])) {
             $user['error']['wrongPassword'] = true;
+            $user['isLoggedIn'] = false;
         } else {
             //set session
             $_SESSION['login'] = $user['login'];
