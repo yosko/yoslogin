@@ -199,7 +199,7 @@ abstract class YosLogin {
         
         //find user
         $user = $this->getUser($login);
-        
+
         //check user/password
         if(empty($user)) {
             $user = array();
@@ -219,7 +219,7 @@ abstract class YosLogin {
             //also create a long-term session
             if($rememberMe) {
 
-                $_SESSION['sid'] = YosLoginTools::generateRandomString();
+                $_SESSION['sid'] = YosLoginTools::generateRandomString(42, true);
 
                 if(!empty($_SESSION['sid'])) {
                     $this->setLTCookie($_SESSION['login'], $_SESSION['sid']);
@@ -277,7 +277,7 @@ abstract class YosLogin {
 
                 //regenerate long-term session
                 $this->unsetLTSession($_COOKIE[$this->sessionName.'lt']);
-                $_SESSION['sid']=YosLoginTools::generateRandomString();
+                $_SESSION['sid']=YosLoginTools::generateRandomString(42, true);
                 $this->setLTCookie($_SESSION['login'], $_SESSION['sid']);
                 $this->setLTSession($this->ltCookie['login'], $this->ltCookie['id'], array());
             } else {

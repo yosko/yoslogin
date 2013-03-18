@@ -32,21 +32,25 @@ class YosLoginTools {
 
     /**
      * Generate a random 42 long string with [ . - A-Z a-z 0-9]
-     * @param  int    $length   length of the returned string
-     * @return string           the random string
-     *                          or an empty string if no id was generated
+     * @param  int    $length        length of the returned string
+     * @param  bool   $pathCompliant true to replace '/' with '-'
+     *                               false for use in Blowfish salt
+     * @return string                the random string
+     *                               or an empty string if no id was generated
      */
-    public static function generateRandomString($length = 42) {
+    public static function generateRandomString($length = 22, $pathCompliant = false) {
         //number of bytes needed to generate a $length long string
         $nbBytes = ceil($length * 6 / 8);
 
         //$random = file_get_contents('/dev/urandom', false, null, 0, 31);
         $randomBytes = secure_random_bytes($nbBytes);
         
+        //format the resulting string
         $randomString = base64_encode($randomBytes);
         if(strlen($randomString) >= $length) {
             $randomString = str_replace('+', '.', $randomString);
-            $randomString = str_replace('/', '-', $randomString);
+            if($pathCompliant === true)
+                $randomString = str_replace('/', '-', $randomString);
             $randomString = substr($randomString, 0, $length);      //keep only what we need
             //$randomString = str_replace('=', '', $randomString);    //remove trailing '='
         } else {
@@ -63,7 +67,7 @@ class YosLoginTools {
      *                or false if salt malformed
      */
     public static function generateSalt() {
-        $random = YosLoginTools::generateRandomString(22);
+        $random = YosLoginTools::generateRandomString();
         
         if( version_compare(PHP_VERSION, '5.3.7') >= 0 ) {
             $salt = '$2y$10$';
@@ -88,10 +92,15 @@ class YosLoginTools {
     public static function hashPassword($password) {
         $hash = '';
 
-        //crypt with blowfish takes approximately 0.05 s
-        $hash = crypt($password, YosLoginTools::generateSalt());
+        $salt = YosLoginTools::generateSalt();
 
-        return $hash;
+        //if salt generation failed
+        if($salt !== false) {
+            $hash = crypt($password, $salt);
+            return $hash;
+        } else {
+            return false;
+        }
     }
 
     /**
