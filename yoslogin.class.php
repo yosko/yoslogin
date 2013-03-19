@@ -296,8 +296,10 @@ abstract class YosLogin {
         if($user['isLoggedIn']) {
             if(!empty($password)) {
                 if(YosLoginTools::checkPassword($password, $user['password'])) {
-                    $_SESSION['ip'] != YosLoginTools::getIpAddress();
+                    $_SESSION['ip'] = YosLoginTools::getIpAddress();
                     $_SESSION['secure'] = true;
+                    
+                    header("Location: $_SERVER[PHP_SELF]");
                 } else {
                     $user['error']['wrongPassword'] = true;
                 }
