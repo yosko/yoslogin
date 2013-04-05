@@ -284,7 +284,7 @@ abstract class YosLogin {
                 //delete long-term cookie
                 setcookie($this->sessionName.'lt', null, time()-31536000, dirname($_SERVER['SCRIPT_NAME']).'/', '', false, true);
                 
-                header("Location: $_SERVER[PHP_SELF]");
+                header("Location: $_SERVER[REQUEST_URI]");
             }
         
         //user isn't logged in: anonymous
@@ -299,7 +299,7 @@ abstract class YosLogin {
                     $_SESSION['ip'] = YosLoginTools::getIpAddress();
                     $_SESSION['secure'] = true;
                     
-                    header("Location: $_SERVER[PHP_SELF]");
+                    header("Location: $_SERVER[REQUEST_URI]");
                 } else {
                     $user['error']['wrongPassword'] = true;
                 }
