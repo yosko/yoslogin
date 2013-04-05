@@ -23,7 +23,7 @@ YosLogin requires **PHP 5.3** ( **PHP 5.3.7** or above recommanded ). It might w
 
 The ```example.php``` file shows how to use YosLogin. Here is a step-by-step explanation of how it is build:
 
-1. Add the files (```yoslogin.class.php```, ```yoslogintools.class.php``` and ```srand.php```) to your project in any folder
+1. Add the files (```yoslogin.class.php``` and ```srand.php```) to your project in any folder
 2. include ```yoslogin.class.php``` in your script. The other ones will be automatically included too:
   ```php
   
