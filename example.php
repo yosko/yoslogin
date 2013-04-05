@@ -119,6 +119,9 @@ class ExampleLogin extends YosLogin {
 }
 
 $logger = new ExampleLogin('exampleSessionName', 200, 2592000, 'cache/');
+//use the following instead for local use (to allow local IP address)
+// $logger = new ExampleLogin('exampleSessionName', 200, 2592000, 'cache/', true);
+
 if(isset($_GET['logout'])) {
     $logger->logOut();
 
@@ -128,7 +131,11 @@ if(isset($_GET['logout'])) {
     
 } else {
     //anon or already authenticated?
-    $user = $logger->authUser();
+    $password = '';
+    if(isset($_POST['password'])) {
+        $password = $_POST['password'];
+    }
+    $user = $logger->authUser($password);
     //DO: ...
 }
 
