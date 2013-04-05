@@ -29,7 +29,7 @@ require_once('yoslogintools.class.php');
  * user information and the way you store and retrieve long-term sessions
  */
 abstract class YosLogin {
-    protected $sessionName, $nbLTSession, $LTDuration, $LTDir, $ltCookie;
+    protected $sessionName, $nbLTSession, $LTDuration, $LTDir, $ltCookie, $allowLocalIp;
     
     /**
      * Initialize the session handler
@@ -38,12 +38,13 @@ abstract class YosLogin {
      * @param int    $LTDuration  duration (in seconds) for long-term sessions
      * @param string $LTDir       optional: path to where the long-term sessions are stored (with trailing '/')
      */
-    public function __construct($sessionName, $nbLTSession = 200, $LTDuration = 2592000, $LTDir = 'cache/') {
+    public function __construct($sessionName, $nbLTSession = 200, $LTDuration = 2592000, $LTDir = 'cache/', $allowLocalIp=false) {
         $this->sessionName = $sessionName;
         $this->nbLTSession = $nbLTSession;
         $this->LTDuration = $LTDuration;
         $this->LTDir = $LTDir;
-        
+        $this->allowLocalIp = $allowLocalIp;
+
         $this->ltCookie = $this->loadLtCookie();
     }
 
@@ -211,7 +212,7 @@ abstract class YosLogin {
         } else {
             //set session
             $_SESSION['login'] = $user['login'];
-            $_SESSION['ip'] = YosLoginTools::getIpAddress();
+            $_SESSION['ip'] = YosLoginTools::getIpAddress($this->allowLocalIp);
             $_SESSION['secure'] = true; //session is scure, for now
             $user['secure'] = $_SESSION['secure'];
             $user['isLoggedIn'] = true;
@@ -258,7 +259,7 @@ abstract class YosLogin {
             //if ip change, the session isn't secure anymore, even if legitimate
             //  it might be because the user was given a new one
             //  or because if a session hijacking
-            if(!isset($_SESSION['ip']) || $_SESSION['ip'] != YosLoginTools::getIpAddress()) {
+            if(!isset($_SESSION['ip']) || $_SESSION['ip'] != YosLoginTools::getIpAddress($this->allowLocalIp)) {
                 $_SESSION['secure'] = false;
             }
             
@@ -296,7 +297,7 @@ abstract class YosLogin {
         if($user['isLoggedIn']) {
             if(!empty($password)) {
                 if(YosLoginTools::checkPassword($password, $user['password'])) {
-                    $_SESSION['ip'] = YosLoginTools::getIpAddress();
+                    $_SESSION['ip'] = YosLoginTools::getIpAddress($this->allowLocalIp);
                     $_SESSION['secure'] = true;
                     
                     header("Location: $_SERVER[REQUEST_URI]");
