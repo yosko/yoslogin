@@ -49,6 +49,9 @@ class ExampleLogin extends YosLogin {
     
     //$value is empty for this implementation, but we may need to add data to the LT session in the future
     protected function setLTSession($login, $sid, $value) {
+        //create the session directory if needed
+        if(!file_exists($this->LTDir)) { mkdir($this->LTDir, 0700, true); }
+
         $fp = fopen($this->LTDir.$login.'_'.$sid.'.ses', 'w');
         fwrite($fp, gzdeflate(json_encode($value)));
         fclose($fp);
