@@ -253,7 +253,7 @@ footer { font-size: 0.8em; color: #666; }
         </ul>
     </div>
     <footer>
-        Yoslogin, code by <a href="http://www.yosko.net/">Yosko</a>, page generated in <?php echo gentime(); ?> s
+        <a href="https://github.com/yosko/yoslogin">Yoslogin <?php echo $logger->getVersion(); ?></a>, code by <a href="http://www.yosko.net/">Yosko</a>, page generated in <?php echo gentime(); ?> s
     </footer>
 </body>
 </html>

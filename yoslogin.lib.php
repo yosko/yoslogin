@@ -36,7 +36,8 @@ abstract class YosLogin {
         $ltCookie,
         $allowLocalIp,
         $actibateLog,
-        $useLTSessions;
+        $useLTSessions,
+        $version;
     
     /**
      * Initialize the session handler
@@ -47,6 +48,8 @@ abstract class YosLogin {
      * @param string $LTDir       optional: path to where the long-term sessions are stored (with trailing '/')
      */
     public function __construct($sessionName, $nbLTSession = 200, $LTDuration = 2592000, $LTDir = 'cache/', $allowLocalIp=false, $activateLog=false) {
+        $this->version = 'v3';
+
         $this->sessionName = $sessionName;
         $this->allowLocalIp = $allowLocalIp;
         $this->activateLog = $activateLog;
@@ -325,6 +328,14 @@ abstract class YosLogin {
         }
         
         return $user;
+    }
+
+    /**
+     * Gives the current version number of YosLogin
+     * @return string version number (v1, v2, v3...)
+     */
+    public function getVersion() {
+        return $this->version;
     }
 }
 
