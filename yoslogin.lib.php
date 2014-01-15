@@ -21,10 +21,10 @@
  */
 
 /**
- * Utility class to handle login verification and short/long term sessions
+ * Utility class to handle login verification and sessions
  * 
- * You need to implement the abstract methods to handle the way you retrieve
- * user information and the way you store and retrieve long-term sessions
+ * You need to implement the abstract method to handle the way you retrieve
+ * user information
  */
 abstract class YosLogin {
     protected
@@ -35,7 +35,8 @@ abstract class YosLogin {
         $LTDir,
         $ltCookie,
         $allowLocalIp,
-        $actibateLog;
+        $actibateLog,
+        $useLTSessions;
     
     /**
      * Initialize the session handler
@@ -47,14 +48,21 @@ abstract class YosLogin {
      */
     public function __construct($sessionName, $nbLTSession = 200, $LTDuration = 2592000, $LTDir = 'cache/', $allowLocalIp=false, $activateLog=false) {
         $this->sessionName = $sessionName;
+        $this->allowLocalIp = $allowLocalIp;
+        $this->activateLog = $activateLog;
+
+        //activate long-term session if needed
+        $interfaces = class_implements(get_called_class());
+        $this->useLTSessions = in_array('YosLTSession', $interfaces);
+
+        //long-term session params
         $this->LTSessionName = $sessionName.'lt';
         $this->nbLTSession = $nbLTSession;
         $this->LTDuration = $LTDuration;
         $this->LTDir = $LTDir;
-        $this->allowLocalIp = $allowLocalIp;
-        $this->activateLog = $activateLog;
 
-        $this->ltCookie = $this->loadLtCookie();
+        if($this->useLTSessions)
+            $this->ltCookie = $this->loadLtCookie();
     }
 
     /**
@@ -65,39 +73,6 @@ abstract class YosLogin {
      */
     abstract protected function getUser($login);
 
-    /**
-     * Save the long term session for the given user and id
-     * @param string $login  user login
-     * @param string $sid    long-term session id (stored in a cookie too)
-     * @param array() $value optional: array of data you want to keep in long-term session on server side
-     */
-    abstract protected function setLTSession($login, $sid, $value);
-
-    /**
-     * Retrieve a long-term session based on the cookie value
-     * @param  string $cookieValue the concatenation of <login>_<id> used in the cookie value
-     * @return array()             optional: array of data stored in the session (empty if no data)
-     *                             or false if long-term session not found or expired
-     */
-    abstract protected function getLTSession($cookieValue);
-
-    /**
-     * Remove a long-term session based on the cookie value
-     * @param  string $cookieValue the concatenation of <login>_<id> used in the cookie value
-     */
-    abstract protected function unsetLTSession($cookieValue);
-
-    /**
-     * Remove all existing long-term sessions for a given user
-     * @param  string $login user login
-     */
-    abstract protected function unsetLTSessions($login);
-
-    /**
-     * Remove all expired or exceeding long-term sessions
-     */
-    abstract protected function flushOldLTSessions();
-    
     /**
      * Initialize and configure the PHP (short-term) session
      */
@@ -189,14 +164,15 @@ abstract class YosLogin {
         //determine user name
         if(isset($_SESSION['login'])) {
             $userName = $_SESSION['login'];
-        } elseif($this->issetLTCookie()) {
+        } elseif($this->useLTSessions && $this->issetLTCookie()) {
             $userName = $this->ltCookie['login'];
         }
         
         //if user wasn't automatically logged out before asking to log out
         if(!empty($userName)) {
             //unset long-term session
-            $this->unsetLTSessions($userName);
+            if($this->useLTSessions)
+                $this->unsetLTSessions($userName);
             $this->unsetLTCookie();
         }
         
@@ -247,7 +223,7 @@ abstract class YosLogin {
             if($this->activateLog) { YosLoginTools::log('manual login '.$login); }
             
             //also create a long-term session
-            if($rememberMe) {
+            if($rememberMe && $this->useLTSessions) {
 
                 $_SESSION['sid'] = YosLoginTools::generateRandomString(42, true);
 
@@ -298,7 +274,7 @@ abstract class YosLogin {
         //user has LT cookie but no PHP session
         } elseif (isset($_COOKIE[$this->LTSessionName])) {
             //TODO: check if LT session exists on server-side
-            $LTSession = $this->getLTSession($_COOKIE[$this->LTSessionName]);
+            $LTSession = $this->useLTSessions?$this->getLTSession($_COOKIE[$this->LTSessionName]):false;
             
             if($LTSession !== false) {
                 //set php session
@@ -320,7 +296,7 @@ abstract class YosLogin {
                 if($this->activateLog) { YosLoginTools::log('lost both sessions, even if lt cookie exists'); }
 
                 //delete long-term cookie
-                setcookie($this->LTSessionName, null, time()-31536000, dirname($_SERVER['SCRIPT_NAME']).'/', '', false, true);
+                $this->unsetLTCookie();
                 
                 header("Location: $_SERVER[REQUEST_URI]");
             }
@@ -352,6 +328,45 @@ abstract class YosLogin {
     }
 }
 
+/**
+ * Interface for long-term session handling
+ * Implement it if you want to use long-term sessions ("remember me checkbox")
+ * and define the way you store and retrieve those sessions
+ */
+interface YosLTSession {
+    /**
+     * Save the long term session for the given user and id
+     * @param string $login  user login
+     * @param string $sid    long-term session id (stored in a cookie too)
+     * @param array() $value optional: array of data you want to keep in long-term session on server side
+     */
+    function setLTSession($login, $sid, $value);
+
+    /**
+     * Retrieve a long-term session based on the cookie value
+     * @param  string $cookieValue the concatenation of <login>_<id> used in the cookie value
+     * @return array()             optional: array of data stored in the session (empty if no data)
+     *                             or false if long-term session not found or expired
+     */
+    function getLTSession($cookieValue);
+
+    /**
+     * Remove a long-term session based on the cookie value
+     * @param  string $cookieValue the concatenation of <login>_<id> used in the cookie value
+     */
+    function unsetLTSession($cookieValue);
+
+    /**
+     * Remove all existing long-term sessions for a given user
+     * @param  string $login user login
+     */
+    function unsetLTSessions($login);
+
+    /**
+     * Remove all expired or exceeding long-term sessions
+     */
+    function flushOldLTSessions();
+}
 
 /**
  * Useful generic utility functions used in YosLogin
