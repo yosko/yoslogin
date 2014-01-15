@@ -31,7 +31,7 @@ function gentime() {
 }
 gentime();
 
-require_once('yoslogin.lib.php');
+require_once('../yoslogin.lib.php');
 
 
 //extends YosLogin to declare app specific methods (like how to store & retrieve users and sessions)
