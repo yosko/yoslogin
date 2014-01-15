@@ -20,6 +20,9 @@
  * 
  */
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 //based on http://www.php.net/manual/en/function.microtime.php#85719
 function gentime() {
     static $a;
@@ -28,7 +31,7 @@ function gentime() {
 }
 gentime();
 
-require_once('yoslogin.class.php');
+require_once('yoslogin.lib.php');
 
 
 //extends YosLogin to declare app specific methods (like how to store & retrieve users and sessions)
