@@ -40,6 +40,7 @@ class YosLogin {
     protected $ltSessionCallbacks;
     protected $activateLog;
     protected $logFile;
+    protected $redirectionPage;
     
     /**
      * Initialize the session handler
@@ -48,12 +49,13 @@ class YosLogin {
      * @param int    $allowLocalIp    true to handle properly localhost & 127.0.0.1 (but a bit less secure: for dev/debug purpose only)
      * @param int    $logFile         name and path to a log file to keep trace of every action
      */
-    public function __construct($sessionName, $getUserCallback, $allowLocalIp=false, $logFile='') {
+    public function __construct($sessionName, $getUserCallback, $redirectionPage = '', $allowLocalIp=false, $logFile='') {
         $this->version = 'v4';
         $this->useLTSessions = false;
 
         $this->sessionName = $sessionName;
         $this->getUserCallback = $getUserCallback;
+        $this->redirectionPage = empty($redirectionPage)?$_SERVER['PHP_SELF']:$redirectionPage;
         $this->allowLocalIp = $allowLocalIp;
         $this->logFile = $logFile;
         $this->activateLog = !empty($this->logFile);
@@ -269,7 +271,7 @@ class YosLogin {
         $_SESSION['secure'] = false;
 
         //to avoid any problem when using the browser's back button
-        header("Location: $_SERVER[PHP_SELF]");
+        header('Location: '.$this->redirectionPage);
     }
 
     /**
@@ -305,7 +307,7 @@ class YosLogin {
         if($this->activateLog) { YosLoginTools::log($this->logFile, 'manual logout '.$userName); }
 
         //to avoid any problem when using the browser's back button
-        header("Location: $_SERVER[PHP_SELF]");
+        header('Location: '.$this->redirectionPage);
     }
 
     /**
@@ -357,7 +359,7 @@ class YosLogin {
             }
 
             //to avoid any problem when using the browser's back button
-            header("Location: $_SERVER[REQUEST_URI]");
+            header('Location: '.$this->redirectionPage);
         }
 
         //wrong login or password: return user with errors
@@ -415,7 +417,7 @@ class YosLogin {
                 //delete long-term cookie
                 $this->unsetLTCookie();
 
-                header("Location: $_SERVER[REQUEST_URI]");
+                header('Location: '.$this->redirectionPage);
             }
 
         //user isn't logged in: anonymous
@@ -433,7 +435,7 @@ class YosLogin {
 
                     if($this->activateLog) { YosLoginTools::log($this->logFile, 'securing access for '.$_SESSION['login']); }
 
-                    header("Location: $_SERVER[REQUEST_URI]");
+                    header('Location: '.$this->redirectionPage);
                 } else {
                     $user['error']['wrongPassword'] = true;
                 }
