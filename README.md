@@ -100,12 +100,10 @@ If you want to handle long-term sessions via a "remember me checkbox" or any oth
         
         //retrieve the $value information based on the two other information
         //or return false if session doesn't exist
-        public static function getLTSession($cookieValue) {
-            return($value);
-        }
+        public static function getLTSession($login, $sid) {}
         
         //unset a specific long-term session based on login & sid
-        public static function unsetLTSession($cookieValue) {}
+        public static function unsetLTSession($login, $sid) {}
         
         //unset all long-term session for this user
         public static function unsetLTSessions($login) {}

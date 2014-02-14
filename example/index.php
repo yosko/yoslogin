@@ -78,14 +78,14 @@ class MyLongTermSessionManager {
         fclose($fp);
     }
     
-    public static function getLTSession($cookieValue) {
+    public static function getLTSession($login, $sid) {
         $value = false;
-        $file = self::$LTDir.$cookieValue.'.ses';
+        $file = self::$LTDir.$login.'_'.$sid.'.ses';
         if (file_exists($file)) {
             
             //unset long-term session if expired
             if(filemtime($file)+self::$LTDuration <= time()) {
-                $this->unsetLTSession($cookieValue);
+                $this->unsetLTSession($login, $sid);
                 $value = false;
             } else {
                 $value = json_decode(gzinflate(file_get_contents($file)), true);
@@ -97,8 +97,8 @@ class MyLongTermSessionManager {
     }
     
     //unset a specific LT session
-    public static function unsetLTSession($cookieValue) {
-        $filePath = self::$LTDir.$cookieValue.'.ses';
+    public static function unsetLTSession($login, $sid) {
+        $filePath = self::$LTDir.$login.'_'.$sid.'.ses';
         if (file_exists($filePath)) {
             unlink($filePath);
         }

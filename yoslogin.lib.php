@@ -163,8 +163,9 @@ class YosLogin {
      *                             or false if long-term session not found or expired
      */
     protected function getLTSession($cookieValue) {
+        $cookieValues = explode('_', $cookieValue, 2);
         if(isset($this->ltSessionCallbacks['getLTSession']))
-            return call_user_func($this->ltSessionCallbacks['getLTSession'], $cookieValue);
+            return call_user_func($this->ltSessionCallbacks['getLTSession'], $cookieValues[0], $cookieValues[1]);
     }
 
     /**
@@ -172,8 +173,9 @@ class YosLogin {
      * @param  string $cookieValue the concatenation of <login>_<id> used in the cookie value
      */
     protected function unsetLTSession($cookieValue) {
+        $cookieValues = explode('_', $cookieValue, 2);
         if(isset($this->ltSessionCallbacks['unsetLTSession']))
-            return call_user_func($this->ltSessionCallbacks['unsetLTSession'], $cookieValue);
+            return call_user_func($this->ltSessionCallbacks['unsetLTSession'], $cookieValues[0], $cookieValues[1]);
     }
 
     /**
@@ -243,7 +245,7 @@ class YosLogin {
     protected function loadLTCookie() {
         if( isset($_COOKIE[$this->LTSessionName]) ) {
             $this->ltCookie = array();
-            $cookieValues = explode('_', $_COOKIE[$this->LTSessionName]);
+            $cookieValues = explode('_', $_COOKIE[$this->LTSessionName], 2);
             $this->ltCookie['login'] = $cookieValues[0];
             $this->ltCookie['sid'] = $cookieValues[1];
         }
@@ -397,7 +399,7 @@ class YosLogin {
 
             if($LTSession !== false) {
                 //set php session
-                $cookieValues = explode('_', $_COOKIE[$this->LTSessionName]);
+                $cookieValues = explode('_', $_COOKIE[$this->LTSessionName], 2);
                 $_SESSION['login'] = $cookieValues[0];
                 $_SESSION['secure'] = false;    //supposedly not secure anymore
                 $user = $this->getUser($_SESSION['login']);
