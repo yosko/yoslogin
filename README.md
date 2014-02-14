@@ -4,9 +4,10 @@ YosLogin
 Lightweight PHP library to help you handle user authentication and long-term sessions on a website.
 
 Main functionnalities:
+
 * password hashing
 * secure PHP session for short-term
-* "remember me" cookie based authentication (Need server-side implementation. A no-database example is given)
+* "remember me" cookie based authentication with your own server-side implementation (A no-database, flat files example is given)
 
 YosLogin's purpose is to handle long-term sessions in a secure, simple and smart way.
 Still it is given as is, without any guarantee that it will work and be that secure.
@@ -23,23 +24,41 @@ The ```example/``` directory shows a complete example of use of YosLogin.
 
 ### Basic usage
 
-1. Include the file ```yoslogin.lib.php``` in your script. No other file needed
+1. Include the file ```yoslogin.lib.php``` in your script. No other file needed.
 
   ```php
-  require_once(yoslogin.lib.php);
+  require_once('yoslogin.lib.php');
   ```
-2. Create your own class inheriting YosLogin and implement the abastract method ```getUser()```:
+2. YosLogin will need to call back one of your function or method to get a user's data (at least login and password hash):
+
   ```php
-  class ExampleLogin extends YosLogin {
-  
-      //retrieve user information from your database (or any source of your choice)
-      protected function getUser($login) {} //must return an array with at least those items: array('login' => '', 'password' => '')
+  //retrieve user information from your database (or any source of your choice)
+  function myOwnGetUserFunction($login) {
+      //must return an array with at least those items: array('login' => '', 'password' => '')
   }
   ```
-3. Call your newly created class from your code and use its public methods to authenticate your users:
+3. Declare your YosLogin object (including the callback to your user retrieving method). See *Callback principle* below for more information on callback syntax.
   ```php
-  $logger = new ExampleLogin('customSessionName');
-  
+  $logger = new \Yosko\YosLogin(
+      //required: the name to give to the session on your users computers
+      'exampleSessionName',
+
+      //required: callback function/method to let YosLogin retrieve a user's login & password hash
+      'myOwnGetUserFunction',
+
+      //optional: redirection page after a successful login/logout/secure/unsecure
+      //if empty, redirection to the current URL without GET parameters
+      '',
+
+      //optional: whether to allow local IPs or not (default: false. Setting it to true can be less secure but can also be useful for dev/debug purpose)
+      true,
+
+      //optional: path to a log file where YosLogin should trace authentication actions
+      'yoslogin.log'
+  );
+  ```
+4. Use the following public methods to authenticate your users:
+  ```php
   //when user asks to log out from your website, destroy his/her sessions
   $logger->logOut();
   
@@ -54,9 +73,6 @@ The ```example/``` directory shows a complete example of use of YosLogin.
   
   //check if authenticated user or anonymous
   if($user['isLoggedIn'] === true) {
-      //use user specific information retrieved from your implementation of getUser
-      echo $user['mySpecificData'];
-
       //check if user recently entered his/her password, and didn't change IP since
       //use it for important actions such as when the user wants to change his/her email or password
       if($user['secure'] === true) {
@@ -66,26 +82,64 @@ The ```example/``` directory shows a complete example of use of YosLogin.
       //show the login form if you are on a user restricted area
   }
   ```
-4. That's all, folks!
+5. That's all, folks!
 
 ### Advance usage: long-term sessions
 
-If you want to handle long-term sessions via a "remember me checkbox" or any other method, you will need to :
+If you want to handle long-term sessions via a "remember me checkbox" or any other method, you will need to:
 
-1. In addition to extending the class ```YosLogin```, implement the interface ```YosLTSession``` and its methods:
+1. Define the 5 functions/methods and 1 value needed by YosLogin to handle long-term sessions on a server (here given as a static class):
+
   ```php
-  class ExampleLogin extends YosLogin implements YosLTSession {
-  
-      //retrieve user information from your database (or any source of your choice)
-      protected function getUser($login) {} //must return an array of the form: array('login' => '', 'password' => '')
-  
-      //methods to handle save and retrieve long-term (LT) sessions on your server
-      protected function setLTSession($login, $sid, $value) {}  //save the LT session on server-side
-      protected function getLTSession($cookieValue) {}          //return LT session data as an array
-      protected function unsetLTSession($cookieValue) {}        //unset a specific LT session
-      protected function unsetLTSessions($login) {}             //unset all server-side LT session for this user
-      protected function flushOldLTSessions() {}                //unset all old server-side LT session
-  }
+    class MyLongTermSessionManager {
+		//duration of a session (in seconds)
+        public static $LTDuration = 2592000;
+
+        //store these information on your server
+        public static function setLTSession($login, $sid, $value) {}
+        
+        //retrieve the $value information based on the two other information
+        //or return false if session doesn't exist
+        public static function getLTSession($cookieValue) {
+            return($value);
+        }
+        
+        //unset a specific long-term session based on login & sid
+        public static function unsetLTSession($cookieValue) {}
+        
+        //unset all long-term session for this user
+        public static function unsetLTSessions($login) {}
+        
+        //delete sessions older than $LTDuration
+        //feel free to also define a maximum number of session to handle at the same time
+        public static function flushOldLTSessions() {}
+    }
+  ```
+2. After calling ```$logger = new \Yosko\YosLogin(...);```, use its ```ltSessionConfig()``` method to tell YosLogin which functions/methods and value must be used for long-term session handling:
+
+  ```php
+  $logger->ltSessionConfig(
+      //callbacks
+      array(
+          //callback for storing a session
+          'setLTSession' => array('MyLongTermSessionManager', 'setLTSession'),
+
+          //callback for retrieving a session
+          'getLTSession' => array('MyLongTermSessionManager', 'getLTSession'),
+
+          //callback for deleting a session
+          'unsetLTSession' => array('MyLongTermSessionManager', 'unsetLTSession'),
+
+          //callback for deleting all sessions of a user
+          'unsetLTSessions' => array('MyLongTermSessionManager', 'unsetLTSessions'),
+
+          //callback for flushing old sessions
+          'flushOldLTSessions' => array('MyLongTermSessionManager', 'flushOldLTSessions')
+      ),
+
+      //duration allowed for a long-term session
+      MyLongTermSessionManager::$LTDuration
+  );
   ```
 2. When logging the user in, add the "remember me" checkbox status as a third parameter:
 
@@ -95,6 +149,38 @@ If you want to handle long-term sessions via a "remember me checkbox" or any oth
   ```
 3. Everything else remains the same
 4. Profit!
+
+### Callback principle
+
+We mentioned above the use of callbacks for retrieving a user or handling long-term session. The principle is:
+
+1. You define a function or method (can be static or not)
+2. You give its name to YosLogin
+3. YosLogin will call it if and when needed
+
+YosLogin uses callbacks as defined in PHP. When asked to give a callback, you are free to give:
+
+```php
+// a function name (string)
+// this is the method used for the "getUser" example above
+$callback = 'myFunction';
+
+// a class name and a function name (for static call)
+// this is the method used in the long-term example above
+$callback = array('myClass', 'myMethod');
+
+// an object instanciated from a class, and the method name (for non-static call)
+$callback = array($myObject, 'myMethod');
+```
+
+## Use of ```$_SESSION```
+
+There are 4 variables kept inside of the global ```$_SESSION```. Make sure your project doesn't override them:
+
+1. ```$_SESSION['ip']```: the IP of the current user (when IP changes, ```$_SESSION['secure']``` is set to ```false```)
+2. ```$_SESSION['login']```: the current user's name
+3. ```$_SESSION['secure']```: whether the current state of the connection is considered secure or not
+4. ```$_SESSION['sid']```: unique ID given to the current session (especially useful for long-term session)
 
 ## Dependancies
 
