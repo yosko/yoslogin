@@ -20,8 +20,10 @@
  * 
  */
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+error_reporting(E_ALL | E_STRICT);
+ini_set('display_errors','On');
+ini_set('log_errors', 'On');
+ini_set('error_log', 'errors.log');
 
 //based on http://www.php.net/manual/en/function.microtime.php#85719
 function gentime() {
@@ -31,43 +33,59 @@ function gentime() {
 }
 gentime();
 
+// require_once('../src/authcontroller.class.php');
 require_once('../yoslogin.lib.php');
 
-
-//extends YosLogin to declare app specific methods (like how to store & retrieve users and sessions)
-class ExampleLogin extends YosLogin implements YosLTSession {
-    
-    //must return an array of the form: array('login' => '', 'password' => '')
-    protected function getUser($login) {
-        $foundUser = array();
-        $users = json_decode(file_get_contents("user.json"), true);
-        foreach($users as $user) {
-            if(trim($login) == $user['login']) {
-                $foundUser = $user;
-                break;
-            }
+/**
+ * requeried function (or class method) used as callback by YosLogin to control
+ * a user login and password
+ * @param  string $login the user login
+ * @return array         associative array with at least a 'login' and a 'password'
+ *                       or just false if user doesn't exist
+ */
+function getUser($login) {
+    $foundUser = array();
+    $users = json_decode(file_get_contents("user.json"), true);
+    foreach($users as $user) {
+        if(trim($login) == $user['login']) {
+            $foundUser = $user;
+            break;
         }
-        return($foundUser);
     }
-    
-    //$value is empty for this implementation, but we may need to add data to the LT session in the future
-    function setLTSession($login, $sid, $value) {
-        //create the session directory if needed
-        if(!file_exists($this->LTDir)) { mkdir($this->LTDir, 0700, true); }
+    return($foundUser);
+}
 
-        $fp = fopen($this->LTDir.$login.'_'.$sid.'.ses', 'w');
+/**
+ * (optional) Define your own long-term session storing system
+ * (either a list of functions or a static class or even a classe to instanciate).
+ * This example is based on flat files, but you could use a database or any other system.
+ */
+class MyLongTermSessionManager {
+     // path to where the long-term sessions are stored
+    protected static $LTDir = 'cache/';
+    // number of sumultaneous long-term sessions allowed
+    protected static $nbLTSession = 200;
+    // duration (in seconds) for long-term sessions (2592000 seconds = 30 days)
+    public static $LTDuration = 2592000;
+
+    //$value is empty for this implementation, but we may need to add data to the LT session in the future
+    public static function setLTSession($login, $sid, $value) {
+        //create the session directory if needed
+        if(!file_exists(self::$LTDir)) { mkdir(self::$LTDir, 0700, true); }
+
+        $fp = fopen(self::$LTDir.$login.'_'.$sid.'.ses', 'w');
         fwrite($fp, gzdeflate(json_encode($value)));
         fclose($fp);
     }
     
-    function getLTSession($cookieValue) {
+    public static function getLTSession($cookieValue) {
         $value = false;
-        $file = $this->LTDir.$cookieValue.'.ses';
+        $file = self::$LTDir.$cookieValue.'.ses';
         if (file_exists($file)) {
             
             //unset long-term session if expired
-            if(filemtime($file)+$this->LTDuration <= time()) {
-                unsetLTSession($cookieValue);
+            if(filemtime($file)+self::$LTDuration <= time()) {
+                $this->unsetLTSession($cookieValue);
                 $value = false;
             } else {
                 $value = json_decode(gzinflate(file_get_contents($file)), true);
@@ -79,23 +97,23 @@ class ExampleLogin extends YosLogin implements YosLTSession {
     }
     
     //unset a specific LT session
-    function unsetLTSession($cookieValue) {
-        $filePath = $this->LTDir.$cookieValue.'.ses';
+    public static function unsetLTSession($cookieValue) {
+        $filePath = self::$LTDir.$cookieValue.'.ses';
         if (file_exists($filePath)) {
             unlink($filePath);
         }
     }
     
     //unset all server-side LT session for this user
-    function unsetLTSessions($login) {
-        $files = glob( $this->LTDir.$login.'_*', GLOB_MARK );
+    public static function unsetLTSessions($login) {
+        $files = glob( self::$LTDir.$login.'_*', GLOB_MARK );
         foreach( $files as $file ) {
             unlink( $file );
         }
     }
     
-    function flushOldLTSessions() {
-        $dir = $this->LTDir;
+    public static function flushOldLTSessions() {
+        $dir = self::$LTDir;
         
         //list all the session files
         $files = array();
@@ -116,7 +134,7 @@ class ExampleLogin extends YosLogin implements YosLTSession {
         //check each file
         $i = 1;
         foreach($files as $file => $date) {
-            if ($i > $this->nbLTSession || $date+$this->LTDuration <= time()) {
+            if ($i > self::$nbLTSession || $date+self::$LTDuration <= time()) {
                 $this->unsetLTSession(basename($file));
             }
             ++$i;
@@ -124,12 +142,52 @@ class ExampleLogin extends YosLogin implements YosLTSession {
     }
 }
 
-$logger = new ExampleLogin('exampleSessionName', 200, 2592000, 'cache/');
+//
+$logger = new \Yosko\YosLogin(
+    //required: the name to give to the session on your users computers
+    'exampleSessionName',
+
+    //required: callback function/method to let YosLogin retrieve a user's login & password hash
+    'getUser',
+
+    //optional: whether to allow local IPs or not (default: false. Setting it to true can be less secure)
+    true,
+
+    //optional: path to a log file where YosLogin should trace authentication actions
+    'yoslogin.log'
+);
+
+//optional: define a long-term session handling that YosLogin can use
+$logger->ltSessionConfig(
+    //callbacks
+    array(
+        //callback for storing a session
+        'setLTSession' => array('MyLongTermSessionManager', 'setLTSession'),
+
+        //callback for retrieving a session
+        'getLTSession' => array('MyLongTermSessionManager', 'getLTSession'),
+
+        //callback for deleting a session
+        'unsetLTSession' => array('MyLongTermSessionManager', 'unsetLTSession'),
+
+        //callback for deleting all sessions of a user
+        'unsetLTSessions' => array('MyLongTermSessionManager', 'unsetLTSessions'),
+
+        //callback for flushing old sessions
+        'flushOldLTSessions' => array('MyLongTermSessionManager', 'flushOldLTSessions')
+    ),
+
+    //duration allowed for a long-term session
+    MyLongTermSessionManager::$LTDuration
+);
 //use the following instead for local use (to allow local IP address)
 // $logger = new ExampleLogin('exampleSessionName', 200, 2592000, 'cache/', true);
 
 if(isset($_GET['logout'])) {
     $logger->logOut();
+
+} elseif(isset($_GET['unsecure'])) {
+    $logger->unsecure();
 
 } elseif(isset($_POST['submitLogin']) && isset($_POST['login']) && isset($_POST['password'])) {
     $user = $logger->logIn($_POST['login'], $_POST['password'], isset($_POST['remember']));
@@ -196,6 +254,10 @@ footer { font-size: 0.8em; color: #666; }
             <br>
             <input type="submit" name="submitPassword" id="submitPassword" value="Secure me" />
         </form>
+    <?php } else { ?>
+        <div>
+            <a href="?unsecure">Unsecure my connection</a>
+        </div>
     <?php } ?>
         <div>
             <a href="?logout">Sign out</a>
@@ -207,7 +269,7 @@ footer { font-size: 0.8em; color: #666; }
             <li>Page loaded <b>at <?php echo date('Y-m-d H:i:s', time()); ?></b> (server hour)</li>
             <li><b>PHP Session :</b>
                 <?php
-                if($user['isLoggedIn']) {
+                if(isset($user) && $user['isLoggedIn']) {
                     ?>
                     <span class="success">Connected</span>
                     <?php
@@ -229,10 +291,10 @@ footer { font-size: 0.8em; color: #666; }
                     <span class="success">Connected</span> (will be used to generate a new PHP session when the old one expires)
                     <ul>
                         <li>Cookie value (login_id) : <?php echo $_COOKIE['exampleSessionNamelt'] ?></li>
-                        <li>Last access : <b>at <?php if (isset($_COOKIE['exampleSessionNamelt'])) { echo date('Y-m-d H:i:s', filemtime('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')); } ?></b></li>
-                        <li>Expire (server-side) : <b>at <?php if (isset($_COOKIE['exampleSessionNamelt'])) { echo date('Y-m-d H:i:s', filemtime('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')+2592000); } ?></b> (If the page isn&apos;t reloaded in the meantime)</li>
+                        <li>Last access : <b><?php if (isset($_COOKIE['exampleSessionNamelt']) && file_exists('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')) { echo 'at '.date('Y-m-d H:i:s', filemtime('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')); } else { echo 'Session file not found on server side.'; } ?></b></li>
+                        <li>Expire (server-side) : <b><?php if (isset($_COOKIE['exampleSessionNamelt']) && file_exists('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')) { echo 'at '.date('Y-m-d H:i:s', filemtime('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')+2592000); } else { echo 'Session file not found on server side.'; } ?></b> (If the page isn&apos;t reloaded in the meantime)</li>
                         <li>Expire (client-side) : not available from the server</li>
-                        <li>Secure: <?php echo ($user['secure']) ? '<span class="success">Yes</span>':'<span class="error">No</span>'; ?> (indicates wether the password was entered recently and on THIS ip)</li>
+                        <li>Secure: <?php echo (isset($user) && $user['secure']) ? '<span class="success">Yes</span>':'<span class="error">No</span>'; ?> (indicates wether the password was entered recently and on THIS ip)</li>
                     </ul>
                     <?php
                 } else {
@@ -248,7 +310,7 @@ footer { font-size: 0.8em; color: #666; }
                 The real value of your cookie might have change with the server response.
             </li>
             <li>
-                The "secure" flag may always be "false" if you work with a local ip.
+                The "secure" flag may always be "false" if you work locally and haven't set YosLogin to accept local IPs.
             </li>
         </ul>
     </div>
