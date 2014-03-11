@@ -126,23 +126,45 @@ class YosLogin {
      * Initialize and configure the PHP (short-term) session
      */
     protected function initPHPSession() {
-        //force cookie path
-        $cookie=session_get_cookie_params();
-        $cookieDir = (dirname($_SERVER['SCRIPT_NAME'])!='/') ? dirname($_SERVER['SCRIPT_NAME']) : '';
-        session_set_cookie_params($cookie['lifetime'], $cookieDir, $_SERVER['SERVER_NAME']);
+        if(!$this->isPHPSessionStarted()) {
+            //force cookie path
+            $cookie=session_get_cookie_params();
+            $cookieDir = (dirname($_SERVER['SCRIPT_NAME'])!='/') ? dirname($_SERVER['SCRIPT_NAME']) : '';
+            session_set_cookie_params($cookie['lifetime'], $cookieDir, $_SERVER['SERVER_NAME']);
 
-        // If allowed, shorten the PHP session to 10 minutes
-        ini_set('session.gc_maxlifetime', 600);
-        // Use cookies to store session.
-        ini_set('session.use_cookies', 1);
-        // Force cookies for session (phpsessionID forbidden in URL)
-        ini_set('session.use_only_cookies', 1);
-        // Prevent php to use sessionID in URL if cookies are disabled.
-        ini_set('session.use_trans_sid', false);
+            // If allowed, shorten the PHP session to 10 minutes
+            ini_set('session.gc_maxlifetime', 600);
+            // Use cookies to store session.
+            ini_set('session.use_cookies', 1);
+            // Force cookies for session (phpsessionID forbidden in URL)
+            ini_set('session.use_only_cookies', 1);
+            // Prevent php to use sessionID in URL if cookies are disabled.
+            ini_set('session.use_trans_sid', false);
 
-        //Session management
-        session_name($this->sessionName);
-        session_start();
+            //Session management
+            session_name($this->sessionName);
+            session_start();
+        }
+    }
+
+    /**
+     * Avoid calling initPHPSession() multiple times by checking if session is already started
+     * @return boolean session status
+     */
+    protected function isPHPSessionStarted() {
+        if ( php_sapi_name() !== 'cli' ) {
+            if ( version_compare(phpversion(), '5.4.0', '>=') ) {
+                return session_status() === PHP_SESSION_ACTIVE ? true : false;
+            } else {
+                return session_id() === '' ? false : true;
+            }
+        }
+        return false;
+    }
+
+    protected function unsetSessionVar($var) {
+        if(isset($_SESSION[$var]))
+            unset($_SESSION[$var]);
     }
 
     /**
@@ -299,17 +321,21 @@ class YosLogin {
         }
 
         //unset PHP session
-        unset($_SESSION['sid']);
-        unset($_SESSION['login']);
-        unset($_SESSION['secure']);
+        $this->unsetSessionVar('sid');
+        $this->unsetSessionVar('login');
+        $this->unsetSessionVar('secure');
         $cookieDir = (dirname($_SERVER['SCRIPT_NAME'])!='/') ? dirname($_SERVER['SCRIPT_NAME']) : '';
         session_set_cookie_params(time()-31536000, $cookieDir, $_SERVER['SERVER_NAME']);
-        session_destroy();
 
         if($this->activateLog) { YosLoginTools::log($this->logFile, 'manual logout '.$userName); }
 
+        if($this->isPHPSessionStarted()) {
+            session_destroy();
+        }
+
         //to avoid any problem when using the browser's back button
         header('Location: '.$this->redirectionPage);
+        exit;
     }
 
     /**
@@ -356,12 +382,13 @@ class YosLogin {
                     $this->flushOldLTSessions();
                 } else {
                     //make sure there is no lt sid set
-                    unset($_SESSION['sid']);
+                    $this->unsetSessionVar('sid');
                 }
             }
 
             //to avoid any problem when using the browser's back button
             header('Location: '.$this->redirectionPage);
+            exit;
         }
 
         //wrong login or password: return user with errors
@@ -420,6 +447,7 @@ class YosLogin {
                 $this->unsetLTCookie();
 
                 header('Location: '.$this->redirectionPage);
+                exit;
             }
 
         //user isn't logged in: anonymous
@@ -438,6 +466,7 @@ class YosLogin {
                     if($this->activateLog) { YosLoginTools::log($this->logFile, 'securing access for '.$_SESSION['login']); }
 
                     header('Location: '.$this->redirectionPage);
+                    exit;
                 } else {
                     $user['error']['wrongPassword'] = true;
                 }
@@ -560,16 +589,15 @@ class YosLoginTools {
 
     public static function log($file, $message, $ltSession = false, $ip = false) {
         $date = date("Y-m-d H:i:s");
-        $message = $message." on ".$_SERVER['REQUEST_URI']
-                .", SESSION: ".json_encode($_SESSION)
-                .", COOKIE: ".json_encode($_COOKIE)
-                ;
-        if($ltSession !== false) {
-            $message .= ", LT SESSION: ".json_encode($ltSession);
-        }
-        if($ip !== false) {
-            $message .= ", IP: ".$ip;
-        }
+        $message = $message." on ".$_SERVER['REQUEST_URI'];
+        if(isset($_SESSION))
+            $message .= "\n\tSESSION: ".json_encode($_SESSION);
+        if(isset($_COOKIE))
+            $message .= "\n\tCOOKIE: ".json_encode($_COOKIE);
+        if($ltSession !== false)
+            $message .= "\n\tLT SESSION: ".json_encode($ltSession);
+        if($ip !== false)
+            $message .= "\n\tIP: ".$ip;
 
         if(!file_exists($file)) {
             touch($file);
