@@ -50,7 +50,7 @@ class YosLogin {
      * @param int    $logFile         name and path to a log file to keep trace of every action
      */
     public function __construct($sessionName, $getUserCallback, $redirectionPage = '', $allowLocalIp=false, $logFile='') {
-        $this->version = 'v4';
+        $this->version = 'v5';
         $this->useLTSessions = false;
 
         $this->sessionName = $sessionName;
@@ -500,9 +500,12 @@ class YosLoginTools {
         //format the resulting string
         $randomString = base64_encode($randomBytes);
         if(strlen($randomString) >= $length) {
-            $randomString = str_replace('+', '.', $randomString);
-            if($pathCompliant === true)
+            if($pathCompliant === true) {
                 $randomString = str_replace('/', '-', $randomString);
+                $randomString = str_replace('+', '_', $randomString);
+            } else {
+                $randomString = str_replace('+', '.', $randomString);
+            }
             $randomString = substr($randomString, 0, $length);      //keep only what we need
             //$randomString = str_replace('=', '', $randomString);    //remove trailing '='
         } else {
