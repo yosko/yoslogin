@@ -364,7 +364,7 @@ class YosLogin {
      * @param  string  $login      login sent via sign in form
      * @param  string  $password   clea password sent via sign in form
      * @param  boolean $rememberMe wether we should use a long-term session or not
-     * @return array()             user informations (from getUser()) + the values of 'isLoggedIn' and optionally 'error'
+     * @return array()             user informations (from getUser()) + the values of 'isLoggedIn' and optionally 'errors'
      */
     public function logIn($login, $password, $rememberMe = false) {
         $user = array();
@@ -376,10 +376,10 @@ class YosLogin {
         //check user/password
         if(empty($user)) {
             $user = array();
-            $user['error']['unknownLogin'] = true;
+            $user['errors']['unknownLogin'] = true;
             $user['isLoggedIn'] = false;
         } elseif(!YosLoginTools::checkPassword($password, $user['password'])) {
-            $user['error']['wrongPassword'] = true;
+            $user['errors']['wrongPassword'] = true;
             $user['isLoggedIn'] = false;
         } else {
             //set session
@@ -489,7 +489,7 @@ class YosLogin {
                     if($this->redirectionPage !== false) header('Location: '.$this->redirectionPage);
                     exit;
                 } else {
-                    $user['error']['wrongPassword'] = true;
+                    $user['errors']['wrongPassword'] = true;
                 }
             }
             $user['secure'] = $_SESSION['secure'];
