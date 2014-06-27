@@ -46,13 +46,6 @@ The ```example/``` directory shows a complete example of use of YosLogin.
       //required: callback function/method to let YosLogin retrieve a user's login & password hash
       'myOwnGetUserFunction',
 
-      //optional: redirection page after a successful login/logout/secure/unsecure
-      //if empty, redirection to the current URL without GET parameters
-      '',
-
-      //optional: whether to allow local IPs or not (default: false. Setting it to true can be less secure but can also be useful for dev/debug purpose)
-      true,
-
       //optional: path to a log file where YosLogin should trace authentication actions
       'yoslogin.log'
   );
@@ -84,7 +77,21 @@ The ```example/``` directory shows a complete example of use of YosLogin.
   ```
 5. That's all, folks!
 
-### Advance usage: long-term sessions
+### Advanced usage: redirection page and local IPs
+
+Right after the call to ```$logger = new \Yosko\YosLogin(...)```, and before anything else, you can define those options:
+
+```php
+//optional: redirection page after a successful login/logout/secure/unsecure
+//if not used or empty value given (''), redirection to the same URL without GET parameters
+//if false, no redirection is done at all
+$logger->setRedirectionPage('');
+
+//optional: whether to allow local IPs or not (default if not called: false. Setting it to true can be less secure)
+$logger->setAllowLocalIp(true);
+```
+
+### Advanced usage: long-term sessions
 
 If you want to handle long-term sessions via a "remember me checkbox" or any other method, you will need to:
 
@@ -92,7 +99,7 @@ If you want to handle long-term sessions via a "remember me checkbox" or any oth
 
   ```php
     class MyLongTermSessionManager {
-		//duration of a session (in seconds)
+		    //duration of a session (in seconds)
         public static $LTDuration = 2592000;
 
         //store these information on your server
