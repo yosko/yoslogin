@@ -49,16 +49,37 @@ class YosLogin {
      * @param int    $allowLocalIp    true to handle properly localhost & 127.0.0.1 (but a bit less secure: for dev/debug purpose only)
      * @param int    $logFile         name and path to a log file to keep trace of every action
      */
-    public function __construct($sessionName, $getUserCallback, $redirectionPage = '', $allowLocalIp=false, $logFile='') {
+    public function __construct($sessionName, $getUserCallback, $allowLocalIp=false, $logFile='') {
         $this->version = 'v5';
         $this->useLTSessions = false;
 
         $this->sessionName = $sessionName;
         $this->getUserCallback = $getUserCallback;
-        $this->redirectionPage = empty($redirectionPage)?$_SERVER['PHP_SELF']:$redirectionPage;
+        $this->redirectionPage = $this->setRedirectionPage(); //redirect to self
         $this->allowLocalIp = $allowLocalIp;
         $this->logFile = $logFile;
         $this->activateLog = !empty($this->logFile);
+    }
+
+    /**
+     * -------------------------------------------------------------------------
+     * GETTERS AND SETTERS
+     * -------------------------------------------------------------------------
+     */
+
+    /**
+     * Define redirection URL (after login/logout/secure/unsecure)
+     * @param misc $redirectionPage possible values:
+     *                                false to disable redirection
+     *                                empty or null to redirect to self (default)
+     *                                url of the destination
+     */
+    public function setRedirectionPage($redirectionPage) {
+        if(!empty($redirectionPage) || $redirectionPage === false) {
+            $this->redirectionPage = $redirectionPage;
+        } else {
+            $this->redirectionPage = $_SERVER['PHP_SELF'];
+        }
     }
 
     /**
@@ -295,7 +316,7 @@ class YosLogin {
         $_SESSION['secure'] = false;
 
         //to avoid any problem when using the browser's back button
-        header('Location: '.$this->redirectionPage);
+        if($this->redirectionPage !== false) header('Location: '.$this->redirectionPage);
     }
 
     /**
@@ -334,7 +355,7 @@ class YosLogin {
         }
 
         //to avoid any problem when using the browser's back button
-        header('Location: '.$this->redirectionPage);
+        if($this->redirectionPage !== false) header('Location: '.$this->redirectionPage);
         exit;
     }
 
@@ -387,7 +408,7 @@ class YosLogin {
             }
 
             //to avoid any problem when using the browser's back button
-            header('Location: '.$this->redirectionPage);
+            if($this->redirectionPage !== false) header('Location: '.$this->redirectionPage);
             exit;
         }
 
@@ -446,7 +467,7 @@ class YosLogin {
                 //delete long-term cookie
                 $this->unsetLTCookie();
 
-                header('Location: '.$this->redirectionPage);
+                if($this->redirectionPage !== false) header('Location: '.$this->redirectionPage);
                 exit;
             }
 
@@ -465,7 +486,7 @@ class YosLogin {
 
                     if($this->activateLog) { YosLoginTools::log($this->logFile, 'securing access for '.$_SESSION['login']); }
 
-                    header('Location: '.$this->redirectionPage);
+                    if($this->redirectionPage !== false) header('Location: '.$this->redirectionPage);
                     exit;
                 } else {
                     $user['error']['wrongPassword'] = true;
