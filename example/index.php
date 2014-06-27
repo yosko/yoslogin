@@ -150,16 +150,18 @@ $logger = new \Yosko\YosLogin(
     //required: callback function/method to let YosLogin retrieve a user's login & password hash
     'getUser',
 
-    //optional: redirection page after a successful login/logout/secure/unsecure
-    //if empty, redirection to the sale URL without GET parameters
-    '',
-
-    //optional: whether to allow local IPs or not (default: false. Setting it to true can be less secure)
-    true,
-
     //optional: path to a log file where YosLogin should trace authentication actions
     'yoslogin.log'
 );
+
+
+//optional: redirection page after a successful login/logout/secure/unsecure
+//if not used or empty value given (''), redirection to the same URL without GET parameters
+//if false, no redirection is done at all
+$logger->setRedirectionPage('');
+
+//optional: whether to allow local IPs or not (default if not called: false. Setting it to true can be less secure)
+$logger->setAllowLocalIp(true);
 
 //optional: define a long-term session handling that YosLogin can use
 $logger->ltSessionConfig(

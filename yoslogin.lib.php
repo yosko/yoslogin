@@ -46,17 +46,16 @@ class YosLogin {
      * Initialize the session handler
      * @param string $sessionName     base name for the PHP and the long-term sessions
      * @param misc   $getUserCallback callback to get a user from its login
-     * @param int    $allowLocalIp    true to handle properly localhost & 127.0.0.1 (but a bit less secure: for dev/debug purpose only)
      * @param int    $logFile         name and path to a log file to keep trace of every action
      */
-    public function __construct($sessionName, $getUserCallback, $allowLocalIp=false, $logFile='') {
+    public function __construct($sessionName, $getUserCallback, $logFile='') {
         $this->version = 'v5';
         $this->useLTSessions = false;
 
         $this->sessionName = $sessionName;
         $this->getUserCallback = $getUserCallback;
-        $this->redirectionPage = $this->setRedirectionPage(); //redirect to self
-        $this->allowLocalIp = $allowLocalIp;
+        $this->redirectionPage = $this->setRedirectionPage(''); //redirect to self
+        $this->allowLocalIp = false;
         $this->logFile = $logFile;
         $this->activateLog = !empty($this->logFile);
     }
@@ -98,6 +97,14 @@ class YosLogin {
      */
     public function getUserCallback($callback) {
         $this->getUserCallback = $callback;
+    }
+
+    /**
+     * Whether local address should be allowed to identify secure session
+     * @param int $allowLocalIp true to handle properly localhost & 127.0.0.1 (but a bit less secure: for dev/debug purpose only)
+     */
+    public function setAllowLocalIp($allowLocalIp) {
+        $this->allowLocalIp = $allowLocalIp;
     }
 
     /**
