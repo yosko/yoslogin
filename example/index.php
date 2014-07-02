@@ -45,9 +45,9 @@ require_once('../yoslogin.lib.php');
  */
 function getUser($login) {
     $foundUser = array();
-    $users = json_decode(file_get_contents("user.json"), true);
+    $users = json_decode(file_get_contents("user.json"));
     foreach($users as $user) {
-        if(trim($login) == $user['login']) {
+        if(trim($login) == $user->login) {
             $foundUser = $user;
             break;
         }
@@ -233,7 +233,7 @@ footer { font-size: 0.8em; color: #666; }
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <h1>Yoslogin</h1>
     <div class="content">
-<?php if(!isset($user) || $user['isLoggedIn'] === false) { ?>
+<?php if(!isset($user) || $user->isLoggedIn === false) { ?>
         <h2>Connection on Yoslogin</h2>
         <form id="loginForm" method="post" action="">
             <label for="login">Login</label>
@@ -248,7 +248,7 @@ footer { font-size: 0.8em; color: #666; }
             <input type="submit" name="submitLogin" id="submitLogin" value="Sign in" />
         </form>
 <?php } else { ?>
-    <?php if($user['secure'] === false) { ?>
+    <?php if($user->secure === false) { ?>
         <div>
             You are logged in, but we can't be absolutely sure your session wasn't hijacked.
             If you wan't to make your session secure again (example: for admin access), please
@@ -275,7 +275,7 @@ footer { font-size: 0.8em; color: #666; }
             <li>Page loaded <b>at <?php echo date('Y-m-d H:i:s', time()); ?></b> (server hour)</li>
             <li><b>PHP Session :</b>
                 <?php
-                if(isset($user) && $user['isLoggedIn']) {
+                if(isset($user) && $user->isLoggedIn) {
                     ?>
                     <span class="success">Connected</span>
                     <?php
@@ -300,7 +300,7 @@ footer { font-size: 0.8em; color: #666; }
                         <li>Last access : <b><?php if (isset($_COOKIE['exampleSessionNamelt']) && file_exists('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')) { echo 'at '.date('Y-m-d H:i:s', filemtime('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')); } else { echo 'Session file not found on server side.'; } ?></b></li>
                         <li>Expire (server-side) : <b><?php if (isset($_COOKIE['exampleSessionNamelt']) && file_exists('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')) { echo 'at '.date('Y-m-d H:i:s', filemtime('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')+2592000); } else { echo 'Session file not found on server side.'; } ?></b> (If the page isn&apos;t reloaded in the meantime)</li>
                         <li>Expire (client-side) : not available from the server</li>
-                        <li>Secure: <?php echo (isset($user) && $user['secure']) ? '<span class="success">Yes</span>':'<span class="error">No</span>'; ?> (indicates wether the password was entered recently and on THIS ip)</li>
+                        <li>Secure: <?php echo (isset($user) && $user->secure) ? '<span class="success">Yes</span>':'<span class="error">No</span>'; ?> (indicates wether the password was entered recently and on THIS ip)</li>
                     </ul>
                     <?php
                 } else {

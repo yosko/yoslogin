@@ -257,8 +257,9 @@ class YosLogin {
      * @param string $sid    session id
      */
     protected function setLTCookie($login, $sid) {
-        $this->ltCookie['login'] = $login;
-        $this->ltCookie['sid'] = $sid;
+        $this->ltCookie = new \stdClass;
+        $this->ltCookie->login = $login;
+        $this->ltCookie->sid = $sid;
 
         //set or update the long term session on client-side
         setcookie(
@@ -294,10 +295,10 @@ class YosLogin {
      */
     protected function loadLTCookie() {
         if( isset($_COOKIE[$this->LTSessionName]) ) {
-            $this->ltCookie = array();
+            $this->ltCookie = new \stdClass;
             $cookieValues = explode('_', $_COOKIE[$this->LTSessionName], 2);
-            $this->ltCookie['login'] = $cookieValues[0];
-            $this->ltCookie['sid'] = $cookieValues[1];
+            $this->ltCookie->login = $cookieValues[0];
+            $this->ltCookie->sid = $cookieValues[1];
         }
     }
 
@@ -306,7 +307,7 @@ class YosLogin {
      * @return bool if the cookie exists or not
      */
     protected function issetLTCookie() {
-        return (isset($this->ltCookie) && !empty($this->ltCookie));
+        return (isset($this->ltCookie->sid));
     }
 
     /**
@@ -337,7 +338,7 @@ class YosLogin {
         if(isset($_SESSION['login'])) {
             $userName = $_SESSION['login'];
         } elseif($this->useLTSessions && $this->issetLTCookie()) {
-            $userName = $this->ltCookie['login'];
+            $userName = $this->ltCookie->login;
         }
 
         //if user wasn't automatically logged out before asking to log out
@@ -374,7 +375,7 @@ class YosLogin {
      * @return array()             user informations (from getUser()) + the values of 'isLoggedIn' and optionally 'errors'
      */
     public function logIn($login, $password, $rememberMe = false) {
-        $user = array();
+        $user = new \stdClass;
         $this->initPHPSession();
 
         //find user
@@ -382,19 +383,19 @@ class YosLogin {
 
         //check user/password
         if(empty($user)) {
-            $user = array();
-            $user['errors']['unknownLogin'] = true;
-            $user['isLoggedIn'] = false;
-        } elseif(!YosLoginTools::checkPassword($password, $user['password'])) {
-            $user['errors']['wrongPassword'] = true;
-            $user['isLoggedIn'] = false;
+            $user = new \stdClass;
+            $user->errors->unknownLogin = true;
+            $user->isLoggedIn = false;
+        } elseif(!YosLoginTools::checkPassword($password, $user->password)) {
+            $user->errors->wrongPassword = true;
+            $user->isLoggedIn = false;
         } else {
             //set session
-            $_SESSION['login'] = $user['login'];
+            $_SESSION['login'] = $user->login;
             $_SESSION['ip'] = YosLoginTools::getIpAddress($this->allowLocalIp);
             $_SESSION['secure'] = true; //session is scure, for now
-            $user['secure'] = $_SESSION['secure'];
-            $user['isLoggedIn'] = true;
+            $user->secure = $_SESSION['secure'];
+            $user->isLoggedIn = true;
 
             if($this->activateLog) { YosLoginTools::log($this->logFile, 'manual login '.$login); }
 
@@ -404,7 +405,7 @@ class YosLogin {
 
                 if(!empty($_SESSION['sid'])) {
                     $this->setLTCookie($_SESSION['login'], $_SESSION['sid']);
-                    $this->setLTSession($this->ltCookie['login'], $this->ltCookie['sid'], array());
+                    $this->setLTSession($this->ltCookie->login, $this->ltCookie->sid, array());
 
                     //maintenance: delete old sessions
                     $this->flushOldLTSessions();
@@ -429,13 +430,13 @@ class YosLogin {
      * @return array()          user informations (from getUser()) + the values of 'isLoggedIn'
      */
     public function authUser($password = '') {
-        $user = array();
+        $user = new \stdClass;
         $this->initPHPSession();
 
         //user has a PHP session
         if(isset($_SESSION['login']) && isset($_COOKIE[$this->sessionName])) {
             $user = $this->getUser($_SESSION['login']);
-            $user['isLoggedIn'] = true;
+            $user->isLoggedIn = true;
 
             if($this->activateLog) { YosLoginTools::log($this->logFile, 'user '.$_SESSION['login'].' is authenticated'); }
 
@@ -458,13 +459,13 @@ class YosLogin {
                 $_SESSION['login'] = $cookieValues[0];
                 $_SESSION['secure'] = false;    //supposedly not secure anymore
                 $user = $this->getUser($_SESSION['login']);
-                $user['isLoggedIn'] = true;
+                $user->isLoggedIn = true;
 
                 //regenerate long-term session
                 $this->unsetLTSession($_COOKIE[$this->LTSessionName]);
                 $_SESSION['sid']=YosLoginTools::generateRandomString(42, true);
                 $this->setLTCookie($_SESSION['login'], $_SESSION['sid']);
-                $this->setLTSession($this->ltCookie['login'], $this->ltCookie['sid'], array());
+                $this->setLTSession($this->ltCookie->login, $this->ltCookie->sid, array());
 
                 if($this->activateLog) { YosLoginTools::log($this->logFile, 'reload PHP session for '.$_SESSION['login'], $LTSession); }
 
@@ -481,13 +482,13 @@ class YosLogin {
         //user isn't logged in: anonymous
         } else {
             if($this->activateLog) { YosLoginTools::log($this->logFile, 'not logged in'); }
-            $user['isLoggedIn'] = false;
+            $user->isLoggedIn = false;
         }
 
         //if a password was given, check it
-        if($user['isLoggedIn']) {
+        if($user->isLoggedIn) {
             if(!empty($password)) {
-                if(YosLoginTools::checkPassword($password, $user['password'])) {
+                if(YosLoginTools::checkPassword($password, $user->password)) {
                     $_SESSION['ip'] = YosLoginTools::getIpAddress($this->allowLocalIp);
                     $_SESSION['secure'] = true;
 
@@ -496,10 +497,10 @@ class YosLogin {
                     if($this->redirectionPage !== false) header('Location: '.$this->redirectionPage);
                     exit;
                 } else {
-                    $user['errors']['wrongPassword'] = true;
+                    $user->errors->wrongPassword = true;
                 }
             }
-            $user['secure'] = $_SESSION['secure'];
+            $user->secure = $_SESSION['secure'];
         }
 
         return $user;
