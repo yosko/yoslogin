@@ -2,28 +2,28 @@
 
 /**
  * Yoslogin - Copyright 2013 Yosko (www.yosko.net)
- * 
+ *
  * This file is part of Yoslogin.
- * 
+ *
  * Yoslogin is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Yoslogin is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with Yoslogin. If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 namespace Yosko;
 
 /**
  * Utility class to handle login verification and sessions
- * 
+ *
  * You need to implement the abstract method to handle the way you retrieve
  * user information
  */
@@ -41,7 +41,7 @@ class YosLogin {
     protected $activateLog;
     protected $logFile;
     protected $redirectionPage;
-    
+
     /**
      * Initialize the session handler
      * @param string $sessionName     base name for the PHP and the long-term sessions
@@ -376,6 +376,7 @@ class YosLogin {
      */
     public function logIn($login, $password, $rememberMe = false) {
         $user = new \stdClass;
+
         $this->initPHPSession();
 
         //find user
@@ -384,10 +385,10 @@ class YosLogin {
         //check user/password
         if(empty($user)) {
             $user = new \stdClass;
-            $user->errors->unknownLogin = true;
+            $user->errors['unknownLogin'] = true;
             $user->isLoggedIn = false;
         } elseif(!YosLoginTools::checkPassword($password, $user->password)) {
-            $user->errors->wrongPassword = true;
+            $user->errors['wrongPassword'] = true;
             $user->isLoggedIn = false;
         } else {
             //set session
@@ -497,7 +498,7 @@ class YosLogin {
                     if($this->redirectionPage !== false) header('Location: '.$this->redirectionPage);
                     exit;
                 } else {
-                    $user->errors->wrongPassword = true;
+                    $user->errors['wrongPassword'] = true;
                 }
             }
             $user->secure = $_SESSION['secure'];
@@ -525,7 +526,7 @@ class YosLoginTools {
 
         //$random = file_get_contents('/dev/urandom', false, null, 0, 31);
         $randomBytes = self::secure_random_bytes($nbBytes);
-        
+
         //format the resulting string
         $randomString = base64_encode($randomBytes);
         if(strlen($randomString) >= $length) {
@@ -679,7 +680,7 @@ class YosLoginTools {
      *
      *
      *
-     * The function is providing, at least at the systems tested :), 
+     * The function is providing, at least at the systems tested :),
      * $len bytes of entropy under any PHP installation or operating system.
      * The execution time should be at most 10-20 ms in any system.
      */
@@ -754,7 +755,7 @@ class YosLoginTools {
                 }
 
                 // Based on the above measurement determine the total rounds
-                // in order to bound the total running time.   
+                // in order to bound the total running time.
                 $rounds = (int)($msec_per_round*50 / (int)(($c2-$c1)*1000000));
 
                 // Take the additional measurements. On average we can expect
@@ -774,7 +775,7 @@ class YosLoginTools {
             $str .= sha1($entropy, true);
         } while ($len > strlen($str));
 
-        if ($handle) 
+        if ($handle)
             @fclose($handle);
 
         return substr($str, 0, $len);
