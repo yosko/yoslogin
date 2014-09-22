@@ -49,7 +49,7 @@ class YosLogin {
      * @param int    $logFile         name and path to a log file to keep trace of every action
      */
     public function __construct($sessionName, $getUserCallback, $logFile='') {
-        $this->version = 'v5';
+        $this->version = 'v6';
         $this->useLTSessions = false;
 
         $this->sessionName = $sessionName;
