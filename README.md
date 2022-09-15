@@ -16,7 +16,7 @@ If you find any bug or flaw, please let me know.
 
 ## Requirements
 
-YosLogin requires **PHP 5.3** ( **PHP 5.3.7** or above recommanded ).
+YosLogin requires **PHP 7.4**.
 
 ## How to use
 

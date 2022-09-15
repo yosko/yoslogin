@@ -2,3 +2,4 @@ cache/*
 example/*.log
 *.sublime-project
 *.sublime-workspace
+.idea

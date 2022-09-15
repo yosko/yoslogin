@@ -43,11 +43,12 @@ require_once('../yoslogin.lib.php');
  * @return array         associative array with at least a 'login' and a 'password'
  *                       or just false if user doesn't exist
  */
-function getUser($login) {
-    $foundUser = array();
-    $users = json_decode(file_get_contents("user.json"));
-    foreach($users as $user) {
-        if(trim($login) == $user->login) {
+function getUser($login): \Yosko\Loggable {
+    $foundUser = new User('', '');
+    $data = json_decode(file_get_contents("user.json"));
+    foreach($data as $userData) {
+        $user = new User($userData->login, $userData->password);
+        if(trim($login) == $user->getLogin()) {
             $foundUser = $user;
             break;
         }
@@ -76,6 +77,7 @@ class MyLongTermSessionManager {
         $fp = fopen(self::$LTDir.$login.'_'.$sid.'.ses', 'w');
         fwrite($fp, gzdeflate(json_encode($value)));
         fclose($fp);
+        return true;
     }
     
     public static function getLTSession($login, $sid) {
@@ -85,7 +87,7 @@ class MyLongTermSessionManager {
             
             //unset long-term session if expired
             if(filemtime($file)+self::$LTDuration <= time()) {
-                $this->unsetLTSession($login, $sid);
+                self::unsetLTSession($login, $sid);
                 $value = false;
             } else {
                 $value = json_decode(gzinflate(file_get_contents($file)), true);
@@ -101,7 +103,9 @@ class MyLongTermSessionManager {
         $filePath = self::$LTDir.$login.'_'.$sid.'.ses';
         if (file_exists($filePath)) {
             unlink($filePath);
+            return true;
         }
+        return false;
     }
     
     //unset all server-side LT session for this user
@@ -110,6 +114,7 @@ class MyLongTermSessionManager {
         foreach( $files as $file ) {
             unlink( $file );
         }
+        return true;
     }
     
     public static function flushOldLTSessions() {
@@ -135,20 +140,88 @@ class MyLongTermSessionManager {
         $i = 1;
         foreach($files as $file => $date) {
             if ($i > self::$nbLTSession || $date+self::$LTDuration <= time()) {
-                $this->unsetLTSession(basename($file));
+                self::unsetLTSession(basename($file));
             }
             ++$i;
-        } 
+        }
+        return true;
+    }
+}
+
+class User implements \Yosko\Loggable {
+    private string $login;
+    private string $password;
+    private array $errors = [];
+    private bool $loggedIn = false;
+    private bool $secure = false;
+
+    public function __construct($login, $password)
+    {
+        $this->login = $login;
+        $this->password = $password;
+    }
+
+    public function getLogin(): string
+    {
+        return $this->login;
+    }
+
+    public function setLogin(string $login): void
+    {
+        $this->login = $login;
+    }
+
+    public function getPassword(): string
+    {
+        return $this->password;
+    }
+
+    public function setPassword(string $password): void
+    {
+        $this->password = $password;
+    }
+
+    public function getErrors(): array
+    {
+        return $this->errors;
+    }
+
+    public function addError(string $code, bool $value): void
+    {
+        $this->errors[] = ['code' => $code, 'value' => $value];
+    }
+
+    public function isLoggedIn(): bool
+    {
+        return $this->loggedIn;
+    }
+
+    public function setIsLoggedIn(bool $isLoggedIn): void
+    {
+        $this->loggedIn = $isLoggedIn;
+    }
+
+    public function isSecure(): bool
+    {
+        return $this->secure;
+    }
+
+    public function setSecure(bool $secure): void
+    {
+        $this->secure = $secure;
     }
 }
 
 //
+$user = new User('', '');
 $logger = new \Yosko\YosLogin(
     //required: the name to give to the session on your users computers
     'exampleSessionName',
 
     //required: callback function/method to let YosLogin retrieve a user's login & password hash
     'getUser',
+
+    $user,
 
     //optional: path to a log file where YosLogin should trace authentication actions
     'yoslogin.log'
@@ -233,7 +306,7 @@ footer { font-size: 0.8em; color: #666; }
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <h1>Yoslogin</h1>
     <div class="content">
-<?php if(!isset($user) || $user->isLoggedIn === false) { ?>
+<?php if(!isset($user) || $user->isLoggedIn() === false) { ?>
         <h2>Connection on Yoslogin</h2>
         <form id="loginForm" method="post" action="">
             <label for="login">Login</label>
@@ -248,7 +321,7 @@ footer { font-size: 0.8em; color: #666; }
             <input type="submit" name="submitLogin" id="submitLogin" value="Sign in" />
         </form>
 <?php } else { ?>
-    <?php if($user->secure === false) { ?>
+    <?php if($user->isSecure() === false) { ?>
         <div>
             You are logged in, but we can't be absolutely sure your session wasn't hijacked.
             If you wan't to make your session secure again (example: for admin access), please
@@ -275,7 +348,7 @@ footer { font-size: 0.8em; color: #666; }
             <li>Page loaded <b>at <?php echo date('Y-m-d H:i:s', time()); ?></b> (server hour)</li>
             <li><b>PHP Session :</b>
                 <?php
-                if(isset($user) && $user->isLoggedIn) {
+                if(isset($user) && $user->isLoggedIn()) {
                     ?>
                     <span class="success">Connected</span>
                     <?php
@@ -300,7 +373,7 @@ footer { font-size: 0.8em; color: #666; }
                         <li>Last access : <b><?php if (isset($_COOKIE['exampleSessionNamelt']) && file_exists('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')) { echo 'at '.date('Y-m-d H:i:s', filemtime('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')); } else { echo 'Session file not found on server side.'; } ?></b></li>
                         <li>Expire (server-side) : <b><?php if (isset($_COOKIE['exampleSessionNamelt']) && file_exists('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')) { echo 'at '.date('Y-m-d H:i:s', filemtime('cache/'.$_COOKIE['exampleSessionNamelt'].'.ses')+2592000); } else { echo 'Session file not found on server side.'; } ?></b> (If the page isn&apos;t reloaded in the meantime)</li>
                         <li>Expire (client-side) : not available from the server</li>
-                        <li>Secure: <?php echo (isset($user) && $user->secure) ? '<span class="success">Yes</span>':'<span class="error">No</span>'; ?> (indicates wether the password was entered recently and on THIS ip)</li>
+                        <li>Secure: <?php echo (isset($user) && $user->isSecure()) ? '<span class="success">Yes</span>':'<span class="error">No</span>'; ?> (indicates wether the password was entered recently and on THIS ip)</li>
                     </ul>
                     <?php
                 } else {
