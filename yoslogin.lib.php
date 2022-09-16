@@ -410,8 +410,7 @@ class YosLogin
         $user = $this->getUser($login);
 
         //check user/password
-        if (empty($user)) {
-            $user = new \Watamelo\Data\User('', '');
+        if (empty($user->getLogin())) {
             $user->addError('unknownLogin', true);
             $user->setIsLoggedIn(false);
         } elseif (!YosLoginTools::checkPassword($password, $user->getPassword())) {
