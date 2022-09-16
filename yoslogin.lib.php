@@ -124,10 +124,10 @@ class YosLogin
     /**
      * Get the user information. Used to check the password
      * @param string $login login sent via login form
-     * @return Loggable      required items: array("login" => <login>, "password" => <password hash>)
+     * @return ?Loggable      required items: array("login" => <login>, "password" => <password hash>)
      *                       or empty array if user not found
      */
-    protected function getUser(string $login): Loggable
+    protected function getUser(string $login): ?Loggable
     {
         return call_user_func($this->getUserCallback, $login);
     }
@@ -411,6 +411,7 @@ class YosLogin
 
         //check user/password
         if (empty($user)) {
+            $user = new \Watamelo\Data\User('', '');
             $user->addError('unknownLogin', true);
             $user->setIsLoggedIn(false);
         } elseif (!YosLoginTools::checkPassword($password, $user->getPassword())) {
