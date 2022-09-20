@@ -1,0 +1,12 @@
+{
+    "name": "yosko/yoslogin",
+    "description": "lightweight PHP library to help you handle user authentication and long-term sessions on a website",
+    "type": "library",
+    "require": {
+        "php": ">=7.4"
+    },
+    "license": "LGPL",
+    "autoload": {
+        "files": ["yoslogin.lib.php"]
+    }
+}
